@@ -88,7 +88,7 @@
                     DFNLOG (@"IN COMPLETION HANDLER FOR OPERATION: %@", op);
                     if (err) DFNLOG(@"-- ERROR: %@", [err localizedDescription]);
 
-                    if (! err) DFNLOG (@"MD5: %@", md5_for_path (self.downloadOperation.downloadPath));
+                    if (! err) DFNLOG (@"MD5: %@", md5_for_path (op.downloadPath));
 
                     self.downloadOperation = nil;
 

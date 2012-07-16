@@ -312,7 +312,9 @@
             if (self.downloadedLength)
             {
                 id val = STRF(@"bytes=%d-", self.downloadedLength);
-                [self.currentRequest setValue: val forHTTPHeaderField: @"Range"];
+
+                [self.currentRequest setValue: val 
+                           forHTTPHeaderField: @"Range"];
             }
         }
         else {
@@ -473,6 +475,10 @@
 {
     int http_status = [(NSHTTPURLResponse*)response statusCode];
 
+    DFNLOG (@"CONNECTION %p GOT RESPONSE %d HEADERS: %@", self.connection, http_status, [(NSHTTPURLResponse*)response allHeaderFields]);
+    DFNLOG (@"-- INITIAL REQUEST WAS: %@ %@", self.request, [self.request allHTTPHeaderFields]);
+
+
     if (http_status >= 300)
     {
         self.error = 
@@ -482,11 +488,10 @@
 
         [self stopConnection];
         [self complete];
+    
+        return;
     }
 
-
-    DFNLOG (@"CONNECTION %p GOT RESPONSE %d HEADERS: %@", self.connection, http_status, [(NSHTTPURLResponse*)response allHeaderFields]);
-    DFNLOG (@"-- INITIAL REQUEST WAS: %@ (%@)", self.request, [self.request allHTTPHeaderFields]);
 
     self.retryCount = 0;
     self.contentLength = response.expectedContentLength;
@@ -538,7 +543,7 @@
 
     if (err)
     {
-        static NSTimeInterval _s_interval[] = { 1.0, 2.0, 3.0 };
+        static NSTimeInterval _s_interval[] = { 1.0, 3.0, 5.0 };
                 
         if (self.retryCount < NELEMS(_s_interval))
         {

@@ -6,25 +6,27 @@
 
 #import <Foundation/Foundation.h>
 
-// #define WITH_KVO_CHANGE(KEY$, EXPR$)            \
-//     [self willChangeValueForKey: @#KEY$];       \
-//     EXPR$;                                      \
-//     [self didChangeValueForKey: @#KEY$];
-
 #define CONCATENATE_HELPER(X$, Y$) X$ ## Y$
 #define CONCATENATE(X$, Y$) CONCATENATE_HELPER(X$, Y$)
 #define UNIQUE_MACRO_IDENT(X$) CONCATENATE(X$, __LINE__)
- 
+
+// WITH_XXX macors -- convenient way to wrap some expression in a pair
+// of PRE_EXPR$ and POST_EXPR$ expressions.
+// As POST_EXPR$ is executed in the increment part of 'for' expression,
+// the only correct way to exit from WITH_XXX is to use 'continue'.
+#define WITH_(PRE_EXPR$, POST_EXPR$)                                    \
+    for (int UNIQUE_MACRO_IDENT($i_) = ((PRE_EXPR$), 1);                \
+         UNIQUE_MACRO_IDENT($i_);                                       \
+         UNIQUE_MACRO_IDENT($i_) = ((POST_EXPR$), 0))
+
+#define BREAK_FROM_WITH continue
 
 #define WITH_KVO_CHANGE(OBJ$, KEY$)                                     \
-    for (int UNIQUE_MACRO_IDENT($i_) = ([OBJ$ willChangeValueForKey: @#KEY$], 1); \
-         UNIQUE_MACRO_IDENT($i_);                                       \
-         UNIQUE_MACRO_IDENT($i_) =([OBJ$ didChangeValueForKey: @#KEY$], 0))
+    WITH_([OBJ$ willChangeValueForKey: @#KEY$],                         \
+          [OBJ$ didChangeValueForKey: @#KEY$])
 
-#define WITH_LOCK(LOCK$)                                                \
-    for (int UNIQUE_MACRO_IDENT($i_) = ([(LOCK$) lock], 1);             \
-         UNIQUE_MACRO_IDENT($i_);                                       \
-         UNIQUE_MACRO_IDENT($i_) =([(LOCK$) unlock], 0))
+#define WITH_LOCK(LOCK$) WITH_([(LOCK$) lock], [(LOCK$) unlock])
+
 
 #define NELEMS(ARR$)   (sizeof(ARR$)/sizeof(ARR$[0]))
 #define IS_NULL(OBJ$) ({id obj$ = (OBJ$); BOOL ret$ = ((!obj$ || (obj$ == NSNULL)) ? YES : NO); ret$;})
