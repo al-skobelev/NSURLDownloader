@@ -21,6 +21,11 @@
          UNIQUE_MACRO_IDENT($i_);                                       \
          UNIQUE_MACRO_IDENT($i_) =([OBJ$ didChangeValueForKey: @#KEY$], 0))
 
+#define WITH_LOCK(LOCK$)                                                \
+    for (int UNIQUE_MACRO_IDENT($i_) = ([(LOCK$) lock], 1);             \
+         UNIQUE_MACRO_IDENT($i_);                                       \
+         UNIQUE_MACRO_IDENT($i_) =([(LOCK$) unlock], 0))
+
 #define NELEMS(ARR$)   (sizeof(ARR$)/sizeof(ARR$[0]))
 #define IS_NULL(OBJ$) ({id obj$ = (OBJ$); BOOL ret$ = ((!obj$ || (obj$ == NSNULL)) ? YES : NO); ret$;})
 

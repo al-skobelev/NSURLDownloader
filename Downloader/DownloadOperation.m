@@ -19,6 +19,7 @@
     BOOL _isExecuting;
 }
 
+@property (strong, nonatomic) NSLock* lock;
 @property (strong, nonatomic) NSURLConnection*   connection;
 @property (strong, nonatomic) NSMutableURLRequest* currentRequest;
 
@@ -43,6 +44,7 @@
 //============================================================================
 @implementation DownloadOperation 
 
+@synthesize lock = _lock;
 @synthesize startingThread = _startingThread;
 @synthesize error          = _error;
 @synthesize connection     = _connection;
@@ -66,6 +68,36 @@
 @synthesize buffer = _buffer;
 
 #define BUFFER_LIMIT 200000
+
+//----------------------------------------------------------------------------
++ (void) downloadThreadProc
+{
+    while (1) 
+    {
+        @autoreleasepool {
+            [[NSRunLoop currentRunLoop] run];
+        }
+    };
+}
+
+//----------------------------------------------------------------------------
++ (NSThread*) downloadThread 
+{
+    static NSThread *_s_thread = nil;
+    static dispatch_once_t _s_once;
+    
+    dispatch_once (&_s_once, ^ {
+            _s_thread = 
+                [[NSThread alloc] initWithTarget: self
+                                        selector: @selector (downloadThreadProc)
+                                          object: nil];
+
+            _s_thread.name = @"DownloadOperation Shared Thread";
+            [_s_thread start];
+        });
+    
+    return _s_thread;
+}
 
 //----------------------------------------------------------------------------
 + (NSOperationQueue*) downloadQueue
@@ -126,6 +158,7 @@
     self.updateHandler     = updateHandler;
     self.completionHandler = completionHandler;
 
+    self.lock = [NSLock new];
     self.buffer = [NSMutableData dataWithCapacity: (BUFFER_LIMIT | 0xFFFF) + 1];
 
 
@@ -155,25 +188,21 @@
 - (BOOL) isExecuting { return _isExecuting; }
 
 //----------------------------------------------------------------------------
-- (void) setIsCancelled: (BOOL) val { WITH_KVO_CHANGE (self, isCancelled) { _isCancelled = val; } }
-- (void) setIsFinished:  (BOOL) val { WITH_KVO_CHANGE (self, isFinished)  { _isFinished  = val; } }
-- (void) setIsExecuting: (BOOL) val { WITH_KVO_CHANGE (self, isExecuting) { _isExecuting = val; } }
+- (void) setIsCancelled: (BOOL) val { if (val != _isCancelled) WITH_KVO_CHANGE (self, isCancelled) { _isCancelled = val; } }
+- (void) setIsFinished:  (BOOL) val { if (val != _isFinished)  WITH_KVO_CHANGE (self, isFinished)  { _isFinished  = val; } }
+- (void) setIsExecuting: (BOOL) val { if (val != _isExecuting) WITH_KVO_CHANGE (self, isExecuting) { _isExecuting = val; } }
 
 //----------------------------------------------------------------------------
 - (void) markExecuting: (BOOL) flag
 {
-    WITH_KVO_CHANGE (self, isExecuting) {
-        WITH_KVO_CHANGE (self, isFinished) {
-            self.isExecuting = flag;
-            self.isFinished = ! flag;
-        }
-    }
+    self.isExecuting = flag;
+    self.isFinished = ! flag;
 }
 
 //----------------------------------------------------------------------------
 - (BOOL) isConcurrent
 {
-    return NO;
+    return YES;
 }
 
 //----------------------------------------------------------------------------
@@ -205,106 +234,50 @@
 }
 
 //----------------------------------------------------------------------------
-- (BOOL) performSelectorOnStartingThread: (SEL) sel
-                              withObject: (id) obj
+- (void) cancel
 {
-    if (self.startingThread && [NSThread currentThread] != self.startingThread)
-    {
-
-        [self performSelector: sel
-                     onThread: self.startingThread
-                   withObject: nil
-                waitUntilDone: YES
-                        modes: NSARRAY(NSRunLoopCommonModes)];
-        return YES;
+    WITH_LOCK (self.lock) 
+    { 
+        [self stopConnection];
+        [self stopBackgroundTask];
+        
+        self.isExecuting = NO;
+        self.isFinished  = YES;
+        self.isCancelled = YES;
     }
-    return NO;
 }
 
 //----------------------------------------------------------------------------
-- (BOOL) performSelectorOnStartingThread: (SEL) sel
+- (void) startConnectionLocked
 {
-    return [self performSelectorOnStartingThread: sel
-                                      withObject: nil];
-}
-
-//----------------------------------------------------------------------------
-- (void) doCancel
-{
-    [self stopConnection];
-
-    WITH_KVO_CHANGE (self, isExecuting) {
-        WITH_KVO_CHANGE (self, isFinished) {
-            WITH_KVO_CHANGE (self, isCancelled) {
-
-                _isExecuting = NO;
-                _isFinished  = YES;
-                _isCancelled = YES;
-            }
+    WITH_LOCK (self.lock)
+    {
+        if ([self startConnection])
+        {
+            self.isExecuting = YES;
+        }
+        else {
+            self.isFinished = YES;
         }
     }
 }
 
-
 //----------------------------------------------------------------------------
-- (void) cancel
+- (void) start
 {
-    if (! [self performSelectorOnStartingThread: @selector(doCancel)])
+    WITH_LOCK (self.lock)
     {
-        [self doCancel];
+        if (! (self.isFinished || self.isCancelled))
+        {
+            self.startingThread = [NSThread currentThread];
+
+            [self performSelector: @selector (startConnectionLocked)
+                         onThread: [[self class] downloadThread]
+                       withObject: nil
+                    waitUntilDone: NO
+                            modes: NSARRAY (NSRunLoopCommonModes)];
+        }
     }
-}
-
-//----------------------------------------------------------------------------
-- (void) asyncStart
-{
-    if (self.isFinished)
-    {
-        return;
-    }
-
-    if (self.isCancelled)
-    {
-        self.isFinished = YES;
-        return;
-    }
-
-    self.startingThread = [NSThread currentThread];
-
-    if ([self startConnection])
-    {
-        self.isExecuting = YES;
-    }
-    else {
-        self.isFinished  = YES;
-    }
-}
-
-//----------------------------------------------------------------------------
-// - (void) start
-// {
-//     [self asyncStart];
-// }
-
-//----------------------------------------------------------------------------
-- (void) main
-{
-    DFNLOG(@"enter main");
-
-    //[self asyncStart];
-    self.isExecuting = YES;
-    [self performSelector: @selector(asyncStart)
-               withObject: nil
-               afterDelay: 0.0];
-
-    while (_isExecuting)
-    {
-        DFNLOG(@"#1 main method in run loop");
-        [[NSRunLoop currentRunLoop] runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 1]];
-        DFNLOG(@"#2 main method in run loop");
-    }
-    DFNLOG(@"exit main");
-    [self markExecuting: NO];
 }
 
 
@@ -359,7 +332,7 @@
         [self.connection start];
         return YES;
     }
-    
+
     return NO;
 }
 
@@ -415,16 +388,19 @@
 //----------------------------------------------------------------------------
 - (void) onReachabilityNtf: (NSNotification*) ntf
 {
-    Reachability* reachability = [ntf object];
-
-    if (ReachableViaWiFi == [reachability currentReachabilityStatus])
+    WITH_LOCK (self.lock)
     {
-        if (self.networkStatus != ReachableViaWiFi)
+        Reachability* reachability = [ntf object];
+
+        if (ReachableViaWiFi == [reachability currentReachabilityStatus])
         {
-            [self stopConnection];
-            if (! [self startConnection])
+            if (self.networkStatus != ReachableViaWiFi)
             {
-                [self markExecuting: NO];
+                [self stopConnection];
+                if (! [self startConnection])
+                {
+                    [self markExecuting: NO];
+                }
             }
         }
     }
@@ -433,27 +409,52 @@
 //----------------------------------------------------------------------------
 - (void) onEnterBackgroundNtf: (NSNotification*) ntf
 {
-    if (self.isExecuting) {
-        [self startBackgroundTask];
+    WITH_LOCK (self.lock)
+    {
+        if (self.isExecuting) [self startBackgroundTask];
     }
 }
 
 //----------------------------------------------------------------------------
 - (void) onExitBackgroundNtf: (NSNotification*) ntf
 {
-    [self stopBackgroundTask];
+    WITH_LOCK (self.lock) { [self stopBackgroundTask]; }
 }
 
 
 //----------------------------------------------------------------------------
 - (void) onRetryConnectionTimer: (NSTimer*) timer
 {
-    if (! [self startConnection])
+    WITH_LOCK (self.lock) 
     {
-        [self markExecuting: NO];
+        if (! [self startConnection])
+        {
+            [self markExecuting: NO];
+        }
     }
 }
 
+//----------------------------------------------------------------------------
+- (void) performUpdateHandler
+{
+    if (self.updateHandler) {
+        dispatch_async (dispatch_get_main_queue(), 
+                        ^{ 
+                            self.updateHandler (self, self.downloadedLength, self.contentLength);
+                        });
+    }
+}
+
+//----------------------------------------------------------------------------
+- (void) performCompletionHandler
+{
+    if (self.completionHandler) {
+        dispatch_async (dispatch_get_main_queue(), 
+                        ^{ 
+                            self.completionHandler (self, self.error);
+                        });
+    }
+}
 
 //----------------------------------------------------------------------------
 - (void) onDidReceiveResponse: (NSURLResponse*) response
@@ -470,12 +471,12 @@
         [self stopConnection];
         [self markExecuting: NO];
 
-        if (self.completionHandler) self.completionHandler (self, self.error);
+        [self performCompletionHandler];
     }
 
 
-    DFNLOG(@"CONNECTION %p GOT RESPONSE %d HEADERS: %@", self.connection, http_status, [(NSHTTPURLResponse*)response allHeaderFields]);
-    DFNLOG(@"-- INITIAL REQUEST WAS: %@ (%@)", self.request, [self.request allHTTPHeaderFields]);
+    DFNLOG (@"CONNECTION %p GOT RESPONSE %d HEADERS: %@", self.connection, http_status, [(NSHTTPURLResponse*)response allHeaderFields]);
+    DFNLOG (@"-- INITIAL REQUEST WAS: %@ (%@)", self.request, [self.request allHTTPHeaderFields]);
 
     self.retryCount = 0;
     self.contentLength = response.expectedContentLength;
@@ -513,8 +514,7 @@
 
         self.downloadedLength += data.length;
         //DFNLOG(@"CONNECTION %p GOT DATA OF LENGTH: %d, DOWNLOADED LENGTH %d, CONTENT LENGTH: %d", connection, data.length, self.downloadedLength, self.contentLength);
-    
-        if (self.updateHandler) self.updateHandler (self, self.downloadedLength, self.contentLength);
+        [self performUpdateHandler];
     }
 }
 
@@ -560,8 +560,7 @@
     if (! self.retryTimer) 
     {
         [self markExecuting: NO];
-
-        if (self.completionHandler) self.completionHandler (self, self.error);
+        [self performCompletionHandler];
     }
 }
 
@@ -569,43 +568,27 @@
 - (void) connection: (NSURLConnection*) connection
  didReceiveResponse: (NSURLResponse*) response
 {
-    if (! [self performSelectorOnStartingThread: @selector(onDidReceiveResponse:)
-                                     withObject: response])
-    {
-        [self onDidReceiveResponse: response];
-    }
+    WITH_LOCK (self.lock) { [self onDidReceiveResponse: response]; }
 }
 
 //----------------------------------------------------------------------------
 - (void) connection: (NSURLConnection*) connection 
      didReceiveData: (NSData*) data
 {
-    if (! [self performSelectorOnStartingThread: @selector(onDidReceiveData:)
-                                     withObject: data])
-    {
-        [self onDidReceiveData: data];
-    }
+    WITH_LOCK (self.lock) { [self onDidReceiveData: data]; }
 }
 
 //----------------------------------------------------------------------------
 - (void) connectionDidFinishLoading: (NSURLConnection*) connection 
 {
-    if (! [self performSelectorOnStartingThread: @selector(onFinishWithError:)
-                                     withObject: nil])
-    {
-        [self onFinishWithError: nil];
-    }
+    WITH_LOCK (self.lock) { [self onFinishWithError: nil]; }
 }
 
 //----------------------------------------------------------------------------
 - (void)  connection: (NSURLConnection*) connection 
     didFailWithError: (NSError*) error
 {
-    if (! [self performSelectorOnStartingThread: @selector(onFinishWithError:)
-                                     withObject: error])
-    {
-        [self onFinishWithError: error];
-    }
+    WITH_LOCK (self.lock) { [self onFinishWithError: error]; }
 }
 
 //----------------------------------------------------------------------------

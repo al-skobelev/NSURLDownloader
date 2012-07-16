@@ -82,15 +82,17 @@
                     if (updateHandler) updateHandler (downloaded, expected);
                 }
 
-        completionHandler: 
+               completionHandler: 
                 ^(DownloadOperation* op, NSError* err) 
                 {
                     DFNLOG (@"IN COMPLETION HANDLER FOR OPERATION: %@", op);
                     if (err) DFNLOG(@"-- ERROR: %@", [err localizedDescription]);
-                                        
-                    if (completionHandler) completionHandler (err);
+
+                    if (! err) DFNLOG (@"MD5: %@", md5_for_path (self.downloadOperation.downloadPath));
 
                     self.downloadOperation = nil;
+
+                    if (completionHandler) completionHandler (err);
                 }];
                                     
 
