@@ -87,7 +87,7 @@ NSString* md5_for_path (NSString* path)
     CC_MD5_CTX ctx;
     NSMutableString* md5str = nil;
 
-    uint64_t tm1 = host_time_us();
+    //uint64_t tm1 = host_time_us();
 
     CC_MD5_Init (&ctx);
 
@@ -113,10 +113,33 @@ NSString* md5_for_path (NSString* path)
         }
     }
 
-    uint64_t tm2 = host_time_us();
-    DFNLOG(@"%s -- %lf", __FUNCTION__, (double)(tm2 - tm1) / 1e6);
+    //uint64_t tm2 = host_time_us();
+    //DFNLOG(@"%s -- %lf", __FUNCTION__, (double)(tm2 - tm1) / 1e6);
 
 QUIT:
     if (file) fclose (file);
     return md5str;
+}
+
+//----------------------------------------------------------------------------
+NSMutableDictionary* ns_mdict (id firstKey, ...)
+{
+    id dict = [NSMutableDictionary dictionary];
+    if (firstKey)
+    {
+        va_list vl;
+        va_start (vl, firstKey);
+
+        id val;
+        id key = firstKey;
+        
+        while(key && (val = va_arg(vl, id)))
+        {
+            [dict setObject: val forKey: key];
+            key = va_arg(vl, id);
+        }
+
+        va_end (vl);
+    }
+    return dict;
 }

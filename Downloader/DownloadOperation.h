@@ -5,15 +5,21 @@
  ****************************************************************************/
 #import <Foundation/Foundation.h>
 
-#define DOWNLOAD_OPERATION_ERROR_SUBDOMAIN @""
+#define DOWNLOAD_OPERATION_ERROR_SUBDOMAIN @"DownloadOperation"
+
+enum {
+    DOWNLOAD_OPERATION_ERROR_CODE_NONE,
+    DOWNLOAD_OPERATION_ERROR_CODE_HTTP_ERROR,
+};
 
 //============================================================================
 @interface DownloadOperation : NSOperation
 
-@property (assign, atomic) BOOL isCancelled;
-@property (assign, atomic) BOOL isExecuting;
-@property (assign, atomic) BOOL isFinished;
-@property (assign, atomic) BOOL isReady;
+@property (readonly) BOOL isConcurrent;
+@property (readonly) BOOL isCancelled;
+@property (readonly) BOOL isExecuting;
+@property (readonly) BOOL isFinished;
+
 
 @property (strong, nonatomic) NSURLRequest* request;
 @property (copy, nonatomic)   NSString* downloadPath;
@@ -23,10 +29,15 @@
 
 @property (strong, nonatomic) NSError* error;
 
-+ operationForURL: (NSURL*) url
-             path: (NSString*) downloadPath
-    updateHandler: (void (^)(DownloadOperation* op, size_t downloaded, size_t expected)) updateHandler
-completionHandelr: (void (^)(DownloadOperation* op, NSError* err)) completionHandler;
+
++ (NSOperationQueue*) downloadQueue;
+
++ operationWithRequest: (NSURLRequest*) request
+          downloadPath: (NSString*) downloadPath
+         updateHandler: (void (^)(DownloadOperation* op, size_t downloaded, size_t expected)) updateHandler
+     completionHandler: (void (^)(DownloadOperation* op, NSError* err)) completionHandler;
+
+- (void) enqueue;
 
 @end
 

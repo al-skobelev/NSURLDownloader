@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		D916ADBF15A6DA410054E150 /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = D916ADBE15A6DA410054E150 /* Reachability.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D916ADC215A6DAAC0054E150 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D916ADC115A6DAAC0054E150 /* SystemConfiguration.framework */; };
+		D9196B5615B3BB03004EB2D4 /* DownloadOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D9196B5515B3BB03004EB2D4 /* DownloadOperation.m */; };
 		D9B587CA15A5A61100CEFC5C /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9B587C915A5A61100CEFC5C /* UIKit.framework */; };
 		D9B587CC15A5A61100CEFC5C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9B587CB15A5A61100CEFC5C /* Foundation.framework */; };
 		D9B587CE15A5A61100CEFC5C /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9B587CD15A5A61100CEFC5C /* CoreGraphics.framework */; };
@@ -22,7 +23,6 @@
 		D9B587EA15A5A61100CEFC5C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9B587CB15A5A61100CEFC5C /* Foundation.framework */; };
 		D9B587F215A5A61100CEFC5C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D9B587F015A5A61100CEFC5C /* InfoPlist.strings */; };
 		D9B587F515A5A61100CEFC5C /* DownloaderTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D9B587F415A5A61100CEFC5C /* DownloaderTests.m */; };
-		D9B5880015A5A6CF00CEFC5C /* ConnectionManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D9B587FF15A5A6CF00CEFC5C /* ConnectionManager.m */; };
 		D9B5880315A5B16D00CEFC5C /* CommonUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = D9B5880215A5B16D00CEFC5C /* CommonUtils.m */; };
 /* End PBXBuildFile section */
 
@@ -40,6 +40,8 @@
 		D916ADBD15A6DA410054E150 /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
 		D916ADBE15A6DA410054E150 /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
 		D916ADC115A6DAAC0054E150 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
+		D9196B5415B3BB03004EB2D4 /* DownloadOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DownloadOperation.h; sourceTree = "<group>"; };
+		D9196B5515B3BB03004EB2D4 /* DownloadOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DownloadOperation.m; sourceTree = "<group>"; };
 		D9B587C515A5A61100CEFC5C /* Downloader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Downloader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D9B587C915A5A61100CEFC5C /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		D9B587CB15A5A61100CEFC5C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -59,8 +61,6 @@
 		D9B587F115A5A61100CEFC5C /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		D9B587F315A5A61100CEFC5C /* DownloaderTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DownloaderTests.h; sourceTree = "<group>"; };
 		D9B587F415A5A61100CEFC5C /* DownloaderTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DownloaderTests.m; sourceTree = "<group>"; };
-		D9B587FE15A5A6CF00CEFC5C /* ConnectionManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ConnectionManager.h; sourceTree = "<group>"; };
-		D9B587FF15A5A6CF00CEFC5C /* ConnectionManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ConnectionManager.m; sourceTree = "<group>"; };
 		D9B5880115A5B16D00CEFC5C /* CommonUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommonUtils.h; sourceTree = "<group>"; };
 		D9B5880215A5B16D00CEFC5C /* CommonUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CommonUtils.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -124,6 +124,8 @@
 		D9B587CF15A5A61100CEFC5C /* Downloader */ = {
 			isa = PBXGroup;
 			children = (
+				D9196B5415B3BB03004EB2D4 /* DownloadOperation.h */,
+				D9196B5515B3BB03004EB2D4 /* DownloadOperation.m */,
 				D916ADBD15A6DA410054E150 /* Reachability.h */,
 				D916ADBE15A6DA410054E150 /* Reachability.m */,
 				D9B587D815A5A61100CEFC5C /* AppDelegate.h */,
@@ -133,8 +135,6 @@
 				D9B587DF15A5A61100CEFC5C /* MainVC.m */,
 				D9B5880115A5B16D00CEFC5C /* CommonUtils.h */,
 				D9B5880215A5B16D00CEFC5C /* CommonUtils.m */,
-				D9B587FE15A5A6CF00CEFC5C /* ConnectionManager.h */,
-				D9B587FF15A5A6CF00CEFC5C /* ConnectionManager.m */,
 				D9B587D015A5A61100CEFC5C /* Supporting Files */,
 			);
 			path = Downloader;
@@ -217,7 +217,7 @@
 			attributes = {
 				LastUpgradeCheck = 0430;
 			};
-			buildConfigurationList = D9B587BF15A5A61100CEFC5C /* Build configuration list for PBXProject "Downloader" */;
+			buildConfigurationList = D9B587BF15A5A61100CEFC5C /* Build configuration list for PBXProject "NSURLDownloader" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -279,9 +279,9 @@
 				D9B587D615A5A61100CEFC5C /* main.m in Sources */,
 				D9B587DA15A5A61100CEFC5C /* AppDelegate.m in Sources */,
 				D9B587E015A5A61100CEFC5C /* MainVC.m in Sources */,
-				D9B5880015A5A6CF00CEFC5C /* ConnectionManager.m in Sources */,
 				D9B5880315A5B16D00CEFC5C /* CommonUtils.m in Sources */,
 				D916ADBF15A6DA410054E150 /* Reachability.m in Sources */,
+				D9196B5615B3BB03004EB2D4 /* DownloadOperation.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -435,7 +435,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D9B587BF15A5A61100CEFC5C /* Build configuration list for PBXProject "Downloader" */ = {
+		D9B587BF15A5A61100CEFC5C /* Build configuration list for PBXProject "NSURLDownloader" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D9B587F615A5A61100CEFC5C /* Debug */,

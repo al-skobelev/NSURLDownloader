@@ -13,7 +13,6 @@
 
 @property (strong, nonatomic) UIWindow*          window;
 @property (readonly)          NSURL*             fileURL;
-@property (readonly)          ConnectionManager* connectionManager;
 @property (readonly)          NSString*          downloadPath;
 
 - (BOOL) startDownload: (NSString*) file

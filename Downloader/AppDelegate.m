@@ -6,6 +6,7 @@
 
 #import "AppDelegate.h"
 #import "CommonUtils.h"
+#import "DownloadOperation.h"
 
 #define DFNLOG(FMT$, ARGS$...) fprintf (stderr, "%s\n", [STRF(FMT$, ##ARGS$) UTF8String])
 // #define DFNLOG(FMT$, ARGS$...) NSLog (@"%s -- " FMT$, __PRETTY_FUNCTION__, ##ARGS$)
@@ -13,14 +14,14 @@
 //============================================================================
 @interface AppDelegate ()
 
-@property (strong, nonatomic) ConnectionRequest* request;
+@property (strong, nonatomic) DownloadOperation* downloadOperation;
 @end
 
 //============================================================================
 @implementation AppDelegate 
 
 @synthesize window = _window;
-@synthesize request = _request;
+@synthesize downloadOperation = _downloadOperation;
 
 //----------------------------------------------------------------------------
 - (NSURL*) fileURL
@@ -29,13 +30,6 @@
     STATIC (_s_url, [NSURL URLWithString: @"https://s3-eu-west-1.amazonaws.com/izi-testing/50.bin"]);
     // STATIC (_s_url, [NSURL URLWithString: @"https://s3-eu-west-1.amazonaws.com/izi-packages/d031fbd9-8942-4168-96ea-914a8a1d3f98.tar.gz"]);
     return _s_url;
-}
-
-//----------------------------------------------------------------------------
-- (ConnectionManager*) connectionManager
-{
-    STATIC (_s_cmgr, [ConnectionManager new]); 
-    return _s_cmgr;
 }
 
 //----------------------------------------------------------------------------
@@ -76,38 +70,67 @@
     NSString* fname = [[url path] lastPathComponent];
     NSString* datapath = STR_ADDPATH (self.downloadPath, fname);
 
-    ConnectionRequest* creq = [ConnectionRequest new];
-    creq.request = req;
-    creq.datapath = datapath;
 
-    if (completionHandler) {
-        creq.completionHandler = ^(ConnectionRequest* req, NSError* err) {
-            DFNLOG(@"IN COMPLETION HANDLER FOR REQUEST: %@", req);
-            if (err) DFNLOG(@"-- ERROR: %@", [err localizedDescription]);
 
-            completionHandler (err);
-        };
-    }
+    DownloadOperation* op = 
+        [DownloadOperation
+            operationWithRequest: req
+                    downloadPath: datapath
+                   updateHandler: 
+                ^(DownloadOperation* op, size_t downloaded, size_t expected) 
+                {
+                    if (updateHandler) updateHandler (downloaded, expected);
+                }
 
-    if (updateHandler) {
-        creq.updateHandler = ^(ConnectionRequest* req, size_t downloaded, size_t expected) {
-            updateHandler (downloaded, expected);
-        };
-    }
+        completionHandler: 
+                ^(DownloadOperation* op, NSError* err) 
+                {
+                    DFNLOG (@"IN COMPLETION HANDLER FOR OPERATION: %@", op);
+                    if (err) DFNLOG(@"-- ERROR: %@", [err localizedDescription]);
+                                        
+                    if (completionHandler) completionHandler (err);
 
-    
-    if ([self.connectionManager addRequest: creq error: NULL])
-    {
-        self.request = creq;
+                    self.downloadOperation = nil;
+                }];
+                                    
+
+    if (op) {
+        [op addObserver: self
+             forKeyPath: @"isCancelled"
+                options: NSKeyValueChangeSetting
+                context: nil];
+        
+        self.downloadOperation = op;
+
+        [op enqueue];
         return YES;
     }
     return NO;
 }
 
 //----------------------------------------------------------------------------
+- (void) observeValueForKeyPath: (NSString*) keyPath
+                       ofObject: (id) object
+                         change: (NSDictionary*) change
+                        context: (void*) context;
+{
+    if (STR_EQL (keyPath, @"isCancelled"))
+    {
+        DFNLOG(@"Object %@ isCancelled!!!!!!", object);
+        return;
+    }
+
+    [super observeValueForKeyPath: keyPath
+                         ofObject: object
+                           change: change
+                          context: context];
+}
+
+//----------------------------------------------------------------------------
 - (void) stopDownload
 {
-    [self.connectionManager cancelRequest: self.request];
+    [self.downloadOperation cancel];
+    self.downloadOperation = nil;
 }
 
 //----------------------------------------------------------------------------

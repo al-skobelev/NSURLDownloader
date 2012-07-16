@@ -6,6 +6,21 @@
 
 #import <Foundation/Foundation.h>
 
+// #define WITH_KVO_CHANGE(KEY$, EXPR$)            \
+//     [self willChangeValueForKey: @#KEY$];       \
+//     EXPR$;                                      \
+//     [self didChangeValueForKey: @#KEY$];
+
+#define CONCATENATE_HELPER(X$, Y$) X$ ## Y$
+#define CONCATENATE(X$, Y$) CONCATENATE_HELPER(X$, Y$)
+#define UNIQUE_MACRO_IDENT(X$) CONCATENATE(X$, __LINE__)
+ 
+
+#define WITH_KVO_CHANGE(OBJ$, KEY$)                                     \
+    for (int UNIQUE_MACRO_IDENT($i_) = ([OBJ$ willChangeValueForKey: @#KEY$], 1); \
+         UNIQUE_MACRO_IDENT($i_);                                       \
+         UNIQUE_MACRO_IDENT($i_) =([OBJ$ didChangeValueForKey: @#KEY$], 0))
+
 #define NELEMS(ARR$)   (sizeof(ARR$)/sizeof(ARR$[0]))
 #define IS_NULL(OBJ$) ({id obj$ = (OBJ$); BOOL ret$ = ((!obj$ || (obj$ == NSNULL)) ? YES : NO); ret$;})
 
@@ -41,10 +56,28 @@
         ((x$ >= l$) && (x$ <= h$));                \
     }) 
 
-
-//============================================================================
-// NSNUMBER MACROS 
 //
+// NSDICT(), NSSET(), NSARRAY()
+//============================================================================
+#define NSDICT(FIRST_KEY$, ARGS$...) ns_mdict (FIRST_KEY$, ##ARGS$, nil)
+
+#define NSSET(FIRST_OBJ$, ARGS$...)                                     \
+    ({                                                                  \
+        id fo$ = FIRST_OBJ$;                                            \
+        id set$ =  (fo$ ? [NSMutableSet setWithObjects: fo$, ##ARGS$, nil] : [NSMutableSet set]); \
+        set$;                                                           \
+    })
+
+#define NSARRAY(FIRST_OBJ$, ARGS$...)                                   \
+    ({                                                                  \
+        id fo$ = FIRST_OBJ$;                                            \
+        id arr$ = (fo$ ? [NSMutableArray arrayWithObjects: fo$, ##ARGS$, nil] : [NSMutableArray array]); \
+        arr$;                                                           \
+    })
+
+//
+// NSNUMBER MACROS 
+//============================================================================
 #define NSDOUBLE(VAL$)   [NSNumber numberWithDouble:           (VAL$)]
 #define NSFLOAT(VAL$)    [NSNumber numberWithFloat:            (VAL$)]
 #define NSINT(VAL$)      [NSNumber numberWithInt:              (VAL$)]
@@ -220,6 +253,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+NSMutableDictionary* ns_mdict (id firstKey, ...);
 
 id info_for_key (NSString* key);
 id info_for_key_in_bundle (NSString* key, NSBundle* bundle);
