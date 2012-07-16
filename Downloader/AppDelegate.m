@@ -94,7 +94,6 @@
 
                     if (completionHandler) completionHandler (err);
                 }];
-                                    
 
     if (op) {
         [op addObserver: self

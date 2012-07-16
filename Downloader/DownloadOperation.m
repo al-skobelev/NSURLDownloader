@@ -134,17 +134,6 @@
 }
 
 //----------------------------------------------------------------------------
-- (NSString*) description
-{
-    NSString* descr = STRF(@"%@ = {\n  URL = <%@>", [super description], [_request URL]);
-    
-    descr = ((_downloadPath) ? STRF (@"%@\n  download path = %@\n}", descr, _downloadPath)
-             : STR_ADD (descr, @"\n}"));
-    
-    return descr;
-}
-
-//----------------------------------------------------------------------------
 - (id) initWithRequest: (NSURLRequest*) request
          downaloadPath: (NSString*) downloadPath
          updateHandler: (void (^)(DownloadOperation* op, size_t downloaded, size_t expected)) updateHandler
@@ -159,6 +148,8 @@
     self.completionHandler = completionHandler;
 
     self.lock = [NSLock new];
+    self.lock.name = STRF(@"DownloadOperation %p Lock", self);
+
     self.buffer = [NSMutableData dataWithCapacity: (BUFFER_LIMIT | 0xFFFF) + 1];
 
 
@@ -174,13 +165,26 @@
 //----------------------------------------------------------------------------
 - (void) dealloc
 {
-    [self cancel];
+    [self stopConnection];
+    [self stopBackgroundTask];
+    
+    [self markExecuting: NO];
 
     REMOVE_OBSERVER (kReachabilityChangedNotification,             self);
     REMOVE_OBSERVER (UIApplicationDidEnterBackgroundNotification,  self);
     REMOVE_OBSERVER (UIApplicationWillEnterForegroundNotification, self);
 }
 
+//----------------------------------------------------------------------------
+- (NSString*) description
+{
+    NSString* descr = STRF(@"%@ = {\n  URL = <%@>", [super description], [_request URL]);
+    
+    descr = ((_downloadPath) ? STRF (@"%@\n  download path = %@\n}", descr, _downloadPath)
+             : STR_ADD (descr, @"\n}"));
+    
+    return descr;
+}
 
 //----------------------------------------------------------------------------
 - (BOOL) isCancelled { return _isCancelled; }
@@ -559,6 +563,7 @@
 
     if (! self.retryTimer) 
     {
+        [self stopBackgroundTask];
         [self markExecuting: NO];
         [self performCompletionHandler];
     }
