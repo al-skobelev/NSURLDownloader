@@ -14,7 +14,7 @@
 //============================================================================
 @interface AppDelegate ()
 
-@property (strong, nonatomic) DownloadOperation* downloadOperation;
+//@property (strong, nonatomic) DownloadOperation* downloadOperation;
 @end
 
 //============================================================================
@@ -97,11 +97,11 @@
 
     if (op) {
         [op addObserver: self
-             forKeyPath: @"isCancelled"
+             forKeyPath: @"isExecuting"
                 options: NSKeyValueChangeSetting
                 context: nil];
         
-        self.downloadOperation = op;
+        //self.downloadOperation = op;
 
         [op enqueue];
         return YES;
@@ -115,9 +115,10 @@
                          change: (NSDictionary*) change
                         context: (void*) context;
 {
-    if (STR_EQL (keyPath, @"isCancelled"))
+    if (STR_EQL (keyPath, @"isExecuting"))
     {
-        DFNLOG(@"Object %@ isCancelled!!!!!!", object);
+        DFNLOG (@"%@ is %sexecuting", object, [object isExecuting] ? "" : "not ");
+        self.downloadOperation = [object isExecuting] ? object : nil;
         return;
     }
 
@@ -130,8 +131,12 @@
 //----------------------------------------------------------------------------
 - (void) stopDownload
 {
-    [self.downloadOperation cancel];
-    self.downloadOperation = nil;
+    if (self.downloadOperation) {
+        [self.downloadOperation cancel];
+    }
+    else {
+        [[DownloadOperation downloadQueue] cancelAllOperations];
+    }
 }
 
 //----------------------------------------------------------------------------

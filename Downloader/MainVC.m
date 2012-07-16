@@ -7,6 +7,7 @@
 #import "MainVC.h"
 #import "AppDelegate.h"
 #import "CommonUtils.h"
+#import "DownloadOperation.h"
 
 //============================================================================
 @implementation MainVC
@@ -78,6 +79,7 @@
 //----------------------------------------------------------------------------
 - (void) downloadFinishedWithError: (NSError*) error
 {
+    
     if (error)
     {
         [self showPlainAlertWithTitle: @"Download Error"
@@ -86,7 +88,11 @@
     else {
         self.progressView.progress = 1.0;
     }
-    [self updateUI: NO];
+
+    if ([[DownloadOperation downloadQueue] operations].count == 0)
+    {
+        [self updateUI: NO];
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -95,7 +101,9 @@
 {
     if (expected > 0)
     {
-        self.countLabel.text = STRF (@"%d/%d", downloaded, expected);
+        self.countLabel.text = STRF (@"%@ %d/%d", 
+                                     [APPD.downloadOperation.downloadPath lastPathComponent], 
+                                     downloaded, expected);
         self.progressView.progress = (float) downloaded / expected;
     }
     else {
@@ -110,6 +118,19 @@
           completionHandler: (^(NSError* err) { [self downloadFinishedWithError: err]; })
               updateHandler: (^(size_t downloaded, size_t expected) 
                               { [self updateDownloaded: downloaded expected: expected]; })])
+
+    // [APPD startDownload: @"5.bin"
+    //   completionHandler: (^(NSError* err) { [self downloadFinishedWithError: err]; })
+    //       updateHandler: (^(size_t downloaded, size_t expected) 
+    //                       { [self updateDownloaded: downloaded expected: expected]; })];
+    // [APPD startDownload: @"15.bin"
+    //   completionHandler: (^(NSError* err) { [self downloadFinishedWithError: err]; })
+    //       updateHandler: (^(size_t downloaded, size_t expected) 
+    //                       { [self updateDownloaded: downloaded expected: expected]; })];
+    // [APPD startDownload: @"50.bin"
+    //   completionHandler: (^(NSError* err) { [self downloadFinishedWithError: err]; })
+    //       updateHandler: (^(size_t downloaded, size_t expected) 
+    //                       { [self updateDownloaded: downloaded expected: expected]; })];
     {
         [self updateUI: YES];
     }

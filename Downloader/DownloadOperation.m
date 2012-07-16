@@ -33,7 +33,7 @@
 @property (assign, nonatomic) NetworkStatus networkStatus;
 
 @property (strong, nonatomic) NSMutableData* buffer;
-@property (strong, nonatomic) NSThread*  startingThread;
+//@property (strong, nonatomic) NSThread*  startingThread;
 
 - (BOOL) flushFileBuffer: (BOOL) force;
 - (BOOL) startConnection;
@@ -45,7 +45,7 @@
 @implementation DownloadOperation 
 
 @synthesize lock = _lock;
-@synthesize startingThread = _startingThread;
+//@synthesize startingThread = _startingThread;
 @synthesize error          = _error;
 @synthesize connection     = _connection;
 @synthesize currentRequest = _currentRequest;
@@ -273,7 +273,7 @@
     {
         if (! (self.isFinished || self.isCancelled))
         {
-            self.startingThread = [NSThread currentThread];
+            //self.startingThread = [NSThread currentThread];
 
             [self performSelector: @selector (startConnectionLocked)
                          onThread: [[self class] downloadThread]
@@ -284,10 +284,10 @@
     }
 }
 
-
 //----------------------------------------------------------------------------
 - (BOOL) startConnection
 {
+    self.error = nil;
     self.partialPath = nil;
     self.downloadedLength = 0;
     self.contentLength = 0;
@@ -461,6 +461,14 @@
 }
 
 //----------------------------------------------------------------------------
+- (void) complete
+{
+    [self stopBackgroundTask];
+    [self markExecuting: NO];
+    [self performCompletionHandler];
+}
+
+//----------------------------------------------------------------------------
 - (void) onDidReceiveResponse: (NSURLResponse*) response
 {
     int http_status = [(NSHTTPURLResponse*)response statusCode];
@@ -473,9 +481,7 @@
                             userInfo: NSDICT (NSLocalizedDescriptionKey, STRLF (@"Server returned error: %d", http_status))];
 
         [self stopConnection];
-        [self markExecuting: NO];
-
-        [self performCompletionHandler];
+        [self complete];
     }
 
 
@@ -563,9 +569,7 @@
 
     if (! self.retryTimer) 
     {
-        [self stopBackgroundTask];
-        [self markExecuting: NO];
-        [self performCompletionHandler];
+        [self complete];
     }
 }
 
@@ -615,8 +619,10 @@
                              timeoutInterval: [old_request timeoutInterval]];
 
             [fields enumerateKeysAndObjectsUsingBlock:
-                ^(id key, id obj, BOOL *stop) {
-                    [new_request setValue: obj forHTTPHeaderField: key];
+                ^(id key, id obj, BOOL *stop) 
+                {
+                    [new_request setValue: obj
+                       forHTTPHeaderField: key];
                 }];
         }
         else {

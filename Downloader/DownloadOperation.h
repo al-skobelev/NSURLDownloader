@@ -15,12 +15,6 @@ enum {
 //============================================================================
 @interface DownloadOperation : NSOperation
 
-@property (readonly) BOOL isConcurrent;
-@property (readonly) BOOL isCancelled;
-@property (readonly) BOOL isExecuting;
-@property (readonly) BOOL isFinished;
-
-
 @property (strong, nonatomic) NSURLRequest* request;
 @property (copy, nonatomic)   NSString* downloadPath;
 
