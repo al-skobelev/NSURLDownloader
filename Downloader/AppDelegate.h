@@ -4,7 +4,6 @@
  *                                                                          * 
  ****************************************************************************/
 #import <UIKit/UIKit.h>
-#import "ConnectionManager.h"
 
 #define APPD ((AppDelegate*)[UIApplication sharedApplication].delegate)
 @class DownloadOperation;
