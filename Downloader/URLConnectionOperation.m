@@ -175,11 +175,16 @@
 //----------------------------------------------------------------------------
 - (NSString*) description
 {
-    NSString* descr = STRF(@"%@ = {\n  URL = <%@>", [super description], [_request URL]);
-    
-    descr = ((_downloadPath) ? STRF (@"%@\n  download path = %@\n}", descr, _downloadPath)
-             : STR_ADD (descr, @"\n}"));
-    
+    NSString* descr = nil;
+    if (_downloadPath)
+    {
+        descr = STRF(@"%@ = {\n  URL = <%@>\n  download path = %@\n}", 
+                     [super description], [_request URL], _downloadPath);
+    }
+    else
+    {
+        descr = STRF(@"%@ = { URL = <%@> }", [super description], [_request URL]);
+    }
     return descr;
 }
 
@@ -509,14 +514,20 @@
         if (self.downloadedLength)
         {
             self.downloadedLength = 0;
-            [self resetResponseData];
 
             if (self.partialPath) {
                 unlink ([self.partialPath fileSystemRepresentation]);
             }
+            else {
+                self.responseData = nil;
+            }
         }
     }
     self.contentLength += self.downloadedLength;
+
+    if (! self.partialPath) {
+        if (! self.responseData) [self resetResponseData];
+    }
 
     DFNLOG (@"DOWNLOADED LENGTH: %d, EXPECTED LENGTH: %d, CONTENT LENGTH: %d", (int) self.downloadedLength, (int) response.expectedContentLength, (int) self.contentLength);
 }
