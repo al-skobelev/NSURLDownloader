@@ -6,7 +6,7 @@
 #import <UIKit/UIKit.h>
 
 #define APPD ((AppDelegate*)[UIApplication sharedApplication].delegate)
-@class DownloadOperation;
+@class URLConnectionOperation;
 //============================================================================
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
@@ -14,7 +14,8 @@
 @property (readonly)          NSURL*             fileURL;
 @property (readonly)          NSString*          downloadPath;
 
-@property (strong, nonatomic) DownloadOperation* downloadOperation;
+@property (strong, nonatomic) URLConnectionOperation* downloadOperation;
+@property (strong, nonatomic) NSOperationQueue*       downloadQueue;
 
 - (BOOL) startDownload: (NSString*) file
      completionHandler: (void (^)(NSError* err)) completionHandler

@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		D916ADBF15A6DA410054E150 /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = D916ADBE15A6DA410054E150 /* Reachability.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D916ADC215A6DAAC0054E150 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D916ADC115A6DAAC0054E150 /* SystemConfiguration.framework */; };
-		D9196B5615B3BB03004EB2D4 /* DownloadOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D9196B5515B3BB03004EB2D4 /* DownloadOperation.m */; };
+		D970F5DA15B6A038008384C5 /* URLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D970F5D915B6A038008384C5 /* URLConnectionOperation.m */; };
 		D9B587CA15A5A61100CEFC5C /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9B587C915A5A61100CEFC5C /* UIKit.framework */; };
 		D9B587CC15A5A61100CEFC5C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9B587CB15A5A61100CEFC5C /* Foundation.framework */; };
 		D9B587CE15A5A61100CEFC5C /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9B587CD15A5A61100CEFC5C /* CoreGraphics.framework */; };
@@ -40,8 +40,8 @@
 		D916ADBD15A6DA410054E150 /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
 		D916ADBE15A6DA410054E150 /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
 		D916ADC115A6DAAC0054E150 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
-		D9196B5415B3BB03004EB2D4 /* DownloadOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DownloadOperation.h; sourceTree = "<group>"; };
-		D9196B5515B3BB03004EB2D4 /* DownloadOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DownloadOperation.m; sourceTree = "<group>"; };
+		D970F5D815B6A038008384C5 /* URLConnectionOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = URLConnectionOperation.h; sourceTree = "<group>"; };
+		D970F5D915B6A038008384C5 /* URLConnectionOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = URLConnectionOperation.m; sourceTree = "<group>"; };
 		D9B587C515A5A61100CEFC5C /* Downloader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Downloader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D9B587C915A5A61100CEFC5C /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		D9B587CB15A5A61100CEFC5C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -124,8 +124,8 @@
 		D9B587CF15A5A61100CEFC5C /* Downloader */ = {
 			isa = PBXGroup;
 			children = (
-				D9196B5415B3BB03004EB2D4 /* DownloadOperation.h */,
-				D9196B5515B3BB03004EB2D4 /* DownloadOperation.m */,
+				D970F5D815B6A038008384C5 /* URLConnectionOperation.h */,
+				D970F5D915B6A038008384C5 /* URLConnectionOperation.m */,
 				D916ADBD15A6DA410054E150 /* Reachability.h */,
 				D916ADBE15A6DA410054E150 /* Reachability.m */,
 				D9B587D815A5A61100CEFC5C /* AppDelegate.h */,
@@ -173,9 +173,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D9B587C415A5A61100CEFC5C /* Downloader */ = {
+		D9B587C415A5A61100CEFC5C /* NSURLDownloader */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D9B587F815A5A61100CEFC5C /* Build configuration list for PBXNativeTarget "Downloader" */;
+			buildConfigurationList = D9B587F815A5A61100CEFC5C /* Build configuration list for PBXNativeTarget "NSURLDownloader" */;
 			buildPhases = (
 				D9B587C115A5A61100CEFC5C /* Sources */,
 				D9B587C215A5A61100CEFC5C /* Frameworks */,
@@ -185,7 +185,7 @@
 			);
 			dependencies = (
 			);
-			name = Downloader;
+			name = NSURLDownloader;
 			productName = Downloader;
 			productReference = D9B587C515A5A61100CEFC5C /* Downloader.app */;
 			productType = "com.apple.product-type.application";
@@ -229,7 +229,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D9B587C415A5A61100CEFC5C /* Downloader */,
+				D9B587C415A5A61100CEFC5C /* NSURLDownloader */,
 				D9B587E515A5A61100CEFC5C /* DownloaderTests */,
 			);
 		};
@@ -281,7 +281,7 @@
 				D9B587E015A5A61100CEFC5C /* MainVC.m in Sources */,
 				D9B5880315A5B16D00CEFC5C /* CommonUtils.m in Sources */,
 				D916ADBF15A6DA410054E150 /* Reachability.m in Sources */,
-				D9196B5615B3BB03004EB2D4 /* DownloadOperation.m in Sources */,
+				D970F5DA15B6A038008384C5 /* URLConnectionOperation.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -298,7 +298,7 @@
 /* Begin PBXTargetDependency section */
 		D9B587EC15A5A61100CEFC5C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D9B587C415A5A61100CEFC5C /* Downloader */;
+			target = D9B587C415A5A61100CEFC5C /* NSURLDownloader */;
 			targetProxy = D9B587EB15A5A61100CEFC5C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -444,7 +444,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D9B587F815A5A61100CEFC5C /* Build configuration list for PBXNativeTarget "Downloader" */ = {
+		D9B587F815A5A61100CEFC5C /* Build configuration list for PBXNativeTarget "NSURLDownloader" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D9B587F915A5A61100CEFC5C /* Debug */,

@@ -6,7 +6,7 @@
 
 #import "AppDelegate.h"
 #import "CommonUtils.h"
-#import "DownloadOperation.h"
+#import "URLConnectionOperation.h"
 
 #define DFNLOG(FMT$, ARGS$...) fprintf (stderr, "%s\n", [STRF(FMT$, ##ARGS$) UTF8String])
 // #define DFNLOG(FMT$, ARGS$...) NSLog (@"%s -- " FMT$, __PRETTY_FUNCTION__, ##ARGS$)
@@ -22,6 +22,7 @@
 
 @synthesize window = _window;
 @synthesize downloadOperation = _downloadOperation;
+@synthesize downloadQueue = _downloadQueue;
 
 //----------------------------------------------------------------------------
 - (NSURL*) fileURL
@@ -72,18 +73,20 @@
 
 
 
-    DownloadOperation* op = 
-        [DownloadOperation
+    URLConnectionOperation* op = 
+        [URLConnectionOperation
             operationWithRequest: req
                     downloadPath: datapath
                    updateHandler: 
-                ^(DownloadOperation* op, size_t downloaded, size_t expected) 
+
+                ^(URLConnectionOperation* op, size_t downloaded, size_t expected) 
                 {
                     if (updateHandler) updateHandler (downloaded, expected);
                 }
 
                completionHandler: 
-                ^(DownloadOperation* op, NSError* err) 
+
+                ^(URLConnectionOperation* op, NSError* err) 
                 {
                     DFNLOG (@"IN COMPLETION HANDLER FOR OPERATION: %@", op);
                     if (err) DFNLOG(@"-- ERROR: %@", [err localizedDescription]);
@@ -103,7 +106,7 @@
         
         //self.downloadOperation = op;
 
-        [op enqueue];
+        [self.downloadQueue addOperation: op];
         return YES;
     }
     return NO;
@@ -134,9 +137,9 @@
     if (self.downloadOperation) {
         [self.downloadOperation cancel];
     }
-    else {
-        [[DownloadOperation downloadQueue] cancelAllOperations];
-    }
+   else {
+       [self.downloadQueue cancelAllOperations];
+   }
 }
 
 //----------------------------------------------------------------------------
@@ -147,6 +150,9 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+    self.downloadQueue = [NSOperationQueue new];
+    [self.downloadQueue setMaxConcurrentOperationCount: 1];
+
     // Override point for customization after application launch.
     return YES;
 }

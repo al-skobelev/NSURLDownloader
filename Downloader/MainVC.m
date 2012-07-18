@@ -7,7 +7,7 @@
 #import "MainVC.h"
 #import "AppDelegate.h"
 #import "CommonUtils.h"
-#import "DownloadOperation.h"
+#import "URLConnectionOperation.h"
 
 //============================================================================
 @implementation MainVC
@@ -89,7 +89,7 @@
         self.progressView.progress = 1.0;
     }
 
-    if ([[DownloadOperation downloadQueue] operations].count == 0)
+    if ([[APPD downloadQueue] operations].count == 0)
     {
         [self updateUI: NO];
     }
@@ -139,8 +139,8 @@
 //----------------------------------------------------------------------------
 - (IBAction) onStopBtn 
 {
-    [self updateUI: NO];
     [APPD stopDownload];
+    [self updateUI: NO];
 }
 
 //----------------------------------------------------------------------------
