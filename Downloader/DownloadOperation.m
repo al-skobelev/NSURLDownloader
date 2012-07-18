@@ -33,7 +33,6 @@
 @property (assign, nonatomic) NetworkStatus networkStatus;
 
 @property (strong, nonatomic) NSMutableData* buffer;
-//@property (strong, nonatomic) NSThread*  startingThread;
 
 - (BOOL) flushFileBuffer: (BOOL) force;
 - (BOOL) startConnection;
@@ -67,10 +66,14 @@
 
 @synthesize buffer = _buffer;
 
+@synthesize responseData = _responseData;
+@synthesize response     = _response;
+
+
 #define BUFFER_LIMIT 200000
 
 //----------------------------------------------------------------------------
-+ (void) downloadThreadProc
++ (void) treadProc
 {
     while (1) 
     {
@@ -81,7 +84,7 @@
 }
 
 //----------------------------------------------------------------------------
-+ (NSThread*) downloadThread 
++ (NSThread*) workThread 
 {
     static NSThread *_s_thread = nil;
     static dispatch_once_t _s_once;
@@ -89,7 +92,7 @@
     dispatch_once (&_s_once, ^ {
             _s_thread = 
                 [[NSThread alloc] initWithTarget: self
-                                        selector: @selector (downloadThreadProc)
+                                        selector: @selector (treadProc)
                                           object: nil];
 
             _s_thread.name = @"DownloadOperation Shared Thread";
@@ -100,7 +103,7 @@
 }
 
 //----------------------------------------------------------------------------
-+ (NSOperationQueue*) downloadQueue
++ (NSOperationQueue*) queue
 {
     static dispatch_once_t _s_once;
     static id _s_queue = nil;
@@ -116,9 +119,8 @@
 //----------------------------------------------------------------------------
 + (NSString*) errorDomain
 {
-    return STRF(@"%@.%@", app_bundle_identifier(), DOWNLOAD_OPERATION_ERROR_SUBDOMAIN);
+    return STRF(@"%@.%@", app_bundle_identifier(), NSStringFromClass(self));
 }
-
 
 //----------------------------------------------------------------------------
 + operationWithRequest: (NSURLRequest*) request
@@ -128,14 +130,27 @@
 {
     return [[self alloc] 
                initWithRequest: request
-                 downaloadPath: downloadPath
+                  downloadPath: nil
+                 updateHandler: updateHandler
+             completionHandler: completionHandler];
+}
+
+//----------------------------------------------------------------------------
++ operationWithRequest: (NSURLRequest*) request
+          downloadPath: (NSString*) downloadPath
+         updateHandler: (void (^)(DownloadOperation* op, size_t downloaded, size_t expected)) updateHandler
+     completionHandler: (void (^)(DownloadOperation* op, NSError* err)) completionHandler
+{
+    return [[self alloc] 
+               initWithRequest: request
+                  downloadPath: downloadPath
                  updateHandler: updateHandler
              completionHandler: completionHandler];
 }
 
 //----------------------------------------------------------------------------
 - (id) initWithRequest: (NSURLRequest*) request
-         downaloadPath: (NSString*) downloadPath
+          downloadPath: (NSString*) downloadPath
          updateHandler: (void (^)(DownloadOperation* op, size_t downloaded, size_t expected)) updateHandler
      completionHandler: (void (^)(DownloadOperation* op, NSError* err)) completionHandler
 {
@@ -148,10 +163,9 @@
     self.completionHandler = completionHandler;
 
     self.lock = [NSLock new];
-    self.lock.name = STRF(@"DownloadOperation %p Lock", self);
+    self.lock.name = STRF(@"%@ %p Lock", NSStringFromClass([self class]), self);
 
     self.buffer = [NSMutableData dataWithCapacity: (BUFFER_LIMIT | 0xFFFF) + 1];
-
 
     _backgroundTaskId = UIBackgroundTaskInvalid;
 
@@ -212,7 +226,7 @@
 //----------------------------------------------------------------------------
 - (void) enqueue
 {
-    NSOperationQueue* queue = [[self class] downloadQueue];
+    NSOperationQueue* queue = [[self class] queue];
     [queue addOperation: self];
 }
 
@@ -232,9 +246,9 @@
     }
 
     if (self.reachability) {
-        // should be stoped on specifc thread as it uses CFRunLoopGetCurrent()
+        // should be stoped on specific thread as it uses CFRunLoopGetCurrent()
         [self.reachability performSelector: @selector(stopNotifier)
-                                  onThread: [[self class] downloadThread]
+                                  onThread: [[self class] workThread]
                                 withObject: nil
                              waitUntilDone: YES];
         self.reachability = nil;
@@ -280,7 +294,7 @@
             //self.startingThread = [NSThread currentThread];
 
             [self performSelector: @selector (startConnectionLocked)
-                         onThread: [[self class] downloadThread]
+                         onThread: [[self class] workThread]
                        withObject: nil
                     waitUntilDone: NO
                             modes: NSARRAY (NSRunLoopCommonModes)];
@@ -298,31 +312,34 @@
 
     self.currentRequest = [self.request mutableCopy];
 
-    unlink ([self.downloadPath fileSystemRepresentation]);
-    self.partialPath = STR_ADDEXT (self.downloadPath, @"partial");
-
-
-    NSFileManager* fm = [NSFileManager defaultManager];
-    
-    if ([fm fileExistsAtPath: self.partialPath])
+    if (self.downloadPath)
     {
-        NSError* err;
-        NSDictionary* attrs = [fm attributesOfItemAtPath: self.partialPath
-                                                   error: &err];
-        if (attrs) 
-        {
-            self.downloadedLength = attrs.fileSize;
-            
-            if (self.downloadedLength)
-            {
-                id val = STRF(@"bytes=%d-", self.downloadedLength);
+        unlink ([self.downloadPath fileSystemRepresentation]);
+        self.partialPath = STR_ADDEXT (self.downloadPath, @"partial");
 
-                [self.currentRequest setValue: val 
-                           forHTTPHeaderField: @"Range"];
+
+        NSFileManager* fm = [NSFileManager defaultManager];
+    
+        if ([fm fileExistsAtPath: self.partialPath])
+        {
+            NSError* err;
+            NSDictionary* attrs = [fm attributesOfItemAtPath: self.partialPath
+                                                       error: &err];
+            if (attrs) 
+            {
+                self.downloadedLength = attrs.fileSize;
+            
+                if (self.downloadedLength)
+                {
+                    id val = STRF(@"bytes=%d-", self.downloadedLength);
+
+                    [self.currentRequest setValue: val 
+                               forHTTPHeaderField: @"Range"];
+                }
             }
-        }
-        else {
-            unlink ([self.partialPath fileSystemRepresentation]);
+            else {
+                unlink ([self.partialPath fileSystemRepresentation]);
+            }
         }
     }
 
@@ -338,7 +355,7 @@
 
         // should be started on specifc thread as it uses CFRunLoopGetCurrent()
         [self.reachability performSelector: @selector(startNotifier)
-                                  onThread: [[self class] downloadThread]
+                                  onThread: [[self class] workThread]
                                 withObject: nil
                              waitUntilDone: YES];
         
@@ -355,26 +372,37 @@
 - (BOOL) flushFileBuffer: (BOOL) force
 {
     BOOL ret = NO;
-    if (self.buffer.length > (force ? 0 : BUFFER_LIMIT))
+    if (self.partialPath)
     {
-        FILE* file = fopen (STR_FSREP (self.partialPath), "a");
-        if (file) 
+        if (self.buffer.length > (force ? 0 : BUFFER_LIMIT))
         {
-            if (self.buffer.length == fwrite (self.buffer.bytes, 1, self.buffer.length, file))
+            FILE* file = fopen (STR_FSREP (self.partialPath), "a");
+            if (file) 
             {
-                DFNLOG(@"Writing %d bytes into file '%@'", self.buffer.length, self.partialPath);
-                ret = YES;
+                if (self.buffer.length == fwrite (self.buffer.bytes, 1, self.buffer.length, file))
+                {
+                    DFNLOG(@"Writing %d bytes into file '%@'", self.buffer.length, self.partialPath);
+                    ret = YES;
+                }
+                else 
+                {
+                    DFNLOG(@"ERROR while writing data in file '%@'", self.partialPath);
+                    ret = NO;
+                }
+                fclose (file);
             }
-            else 
-            {
-                DFNLOG(@"ERROR while writing data in file '%@'", self.partialPath);
-                ret = NO;
-            }
-            fclose (file);
+            [self.buffer setLength: 0];
         }
-        [self.buffer setLength: 0];
     }
     return ret;
+}
+
+//----------------------------------------------------------------------------
+- (void) resetResponseData
+{
+    self.responseData = (self.contentLength > 0
+                         ? [NSMutableData dataWithCapacity: self.contentLength] 
+                         : [NSMutableData data]);
 }
 
 //----------------------------------------------------------------------------
@@ -483,6 +511,7 @@
 - (void) onDidReceiveResponse: (NSURLResponse*) response
 {
     int http_status = [(NSHTTPURLResponse*)response statusCode];
+    self.response = response;
 
     DFNLOG (@"CONNECTION %p GOT RESPONSE %d HEADERS: %@", self.connection, http_status, [(NSHTTPURLResponse*)response allHeaderFields]);
     DFNLOG (@"-- INITIAL REQUEST WAS: %@ %@", self.request, [self.request allHTTPHeaderFields]);
@@ -501,7 +530,6 @@
         return;
     }
 
-
     self.retryCount = 0;
     self.contentLength = response.expectedContentLength;
 
@@ -509,15 +537,16 @@
     {
         if (self.downloadedLength)
         {
-            if (self.partialPath) 
-            {
-                self.downloadedLength = 0;
+            self.downloadedLength = 0;
+            [self resetResponseData];
+
+            if (self.partialPath) {
                 unlink ([self.partialPath fileSystemRepresentation]);
             }
         }
     }
+    self.contentLength += self.downloadedLength;
 
-    self.contentLength += (self.partialPath ? self.downloadedLength : 0);
     DFNLOG (@"DOWNLOADED LENGTH: %d, EXPECTED LENGTH: %d, CONTENT LENGTH: %d", (int) self.downloadedLength, (int) response.expectedContentLength, (int) self.contentLength);
 }
 
@@ -534,6 +563,9 @@
             }
                 
             [self flushFileBuffer: NO];
+        }
+        else {
+            [self.responseData appendData: data];
         }
 
         self.downloadedLength += data.length;
