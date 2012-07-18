@@ -9,7 +9,6 @@
 #import "CommonUtils.h"
 
 #define DFNLOG(FMT$, ARGS$...) fprintf (stderr, "%s\n", [STRF(FMT$, ##ARGS$) UTF8String])
-#define ELOG(FMT$, ARGS$...)   fprintf (stderr, "%s\n", [STRF(FMT$, ##ARGS$) UTF8String])
 
 //============================================================================
 @interface DownloadOperation ()
@@ -20,6 +19,7 @@
     BOOL _isExecuting;
 }
 
+@property (strong, nonatomic) NSLock* lock;
 @property (strong, nonatomic) NSURLConnection*   connection;
 @property (strong, nonatomic) NSMutableURLRequest* currentRequest;
 
@@ -33,7 +33,7 @@
 @property (assign, nonatomic) NetworkStatus networkStatus;
 
 @property (strong, nonatomic) NSMutableData* buffer;
-
+//@property (strong, nonatomic) NSThread*  startingThread;
 
 - (BOOL) flushFileBuffer: (BOOL) force;
 - (BOOL) startConnection;
@@ -44,6 +44,8 @@
 //============================================================================
 @implementation DownloadOperation 
 
+@synthesize lock = _lock;
+//@synthesize startingThread = _startingThread;
 @synthesize error          = _error;
 @synthesize connection     = _connection;
 @synthesize currentRequest = _currentRequest;
@@ -145,7 +147,11 @@
     self.updateHandler     = updateHandler;
     self.completionHandler = completionHandler;
 
+    self.lock = [NSLock new];
+    self.lock.name = STRF(@"DownloadOperation %p Lock", self);
+
     self.buffer = [NSMutableData dataWithCapacity: (BUFFER_LIMIT | 0xFFFF) + 1];
+
 
     _backgroundTaskId = UIBackgroundTaskInvalid;
 
@@ -211,30 +217,6 @@
 }
 
 //----------------------------------------------------------------------------
-- (BOOL) performSelectorOnDownloadThread: (SEL) sel
-                              withObject: (id) obj
-{
-    NSThread* thread = [[self class] downloadThread];
-    if (thread && [NSThread currentThread] != thread)
-    {
-        [self performSelector: sel
-                     onThread: thread
-                   withObject: nil
-                waitUntilDone: YES];
-
-        return YES;
-    }
-    return NO;
-}
-
-//----------------------------------------------------------------------------
-- (BOOL) performSelectorOnDownloadThread: (SEL) sel
-{
-    return [self performSelectorOnDownloadThread: sel
-                                      withObject: nil];
-}
-
-//----------------------------------------------------------------------------
 - (void) stopConnection
 {
     [self flushFileBuffer: YES];
@@ -250,17 +232,20 @@
     }
 
     if (self.reachability) {
-        [self.reachability stopNotifier];
+        // should be stoped on specifc thread as it uses CFRunLoopGetCurrent()
+        [self.reachability performSelector: @selector(stopNotifier)
+                                  onThread: [[self class] downloadThread]
+                                withObject: nil
+                             waitUntilDone: YES];
         self.reachability = nil;
     }
 }
 
-
 //----------------------------------------------------------------------------
 - (void) cancel
 {
-    if (! [self performSelectorOnDownloadThread: _cmd])
-    {
+    WITH_LOCK (self.lock) 
+    { 
         [self stopConnection];
         [self stopBackgroundTask];
         
@@ -271,19 +256,34 @@
 }
 
 //----------------------------------------------------------------------------
+- (void) startConnectionLocked
+{
+    WITH_LOCK (self.lock)
+    {
+        if ([self startConnection])
+        {
+            self.isExecuting = YES;
+        }
+        else {
+            self.isFinished = YES;
+        }
+    }
+}
+
+//----------------------------------------------------------------------------
 - (void) start
 {
-    if (! [self performSelectorOnDownloadThread: _cmd])
+    WITH_LOCK (self.lock)
     {
         if (! (self.isFinished || self.isCancelled))
         {
-            if ([self startConnection])
-            {
-                self.isExecuting = YES;
-            }
-            else {
-                self.isFinished = YES;
-            }
+            //self.startingThread = [NSThread currentThread];
+
+            [self performSelector: @selector (startConnectionLocked)
+                         onThread: [[self class] downloadThread]
+                       withObject: nil
+                    waitUntilDone: NO
+                            modes: NSARRAY (NSRunLoopCommonModes)];
         }
     }
 }
@@ -333,12 +333,14 @@
 
     if (self.connection) 
     {
-        if (! self.reachability) {
-            self.reachability = [Reachability reachabilityForLocalWiFi];
-        }
-
+        self.reachability = [Reachability reachabilityForLocalWiFi];
         self.networkStatus = [self.reachability currentReachabilityStatus];
-        [self.reachability startNotifier];
+
+        // should be started on specifc thread as it uses CFRunLoopGetCurrent()
+        [self.reachability performSelector: @selector(startNotifier)
+                                  onThread: [[self class] downloadThread]
+                                withObject: nil
+                             waitUntilDone: YES];
         
         [self.connection scheduleInRunLoop: [NSRunLoop currentRunLoop]
                                    forMode: NSDefaultRunLoopMode];
@@ -401,8 +403,7 @@
 //----------------------------------------------------------------------------
 - (void) onReachabilityNtf: (NSNotification*) ntf
 {
-    if (! [self performSelectorOnDownloadThread: _cmd
-                                     withObject: ntf])
+    WITH_LOCK (self.lock)
     {
         Reachability* reachability = [ntf object];
 
@@ -423,8 +424,7 @@
 //----------------------------------------------------------------------------
 - (void) onEnterBackgroundNtf: (NSNotification*) ntf
 {
-    if (! [self performSelectorOnDownloadThread: _cmd
-                                     withObject: ntf])
+    WITH_LOCK (self.lock)
     {
         if (self.isExecuting) [self startBackgroundTask];
     }
@@ -433,19 +433,14 @@
 //----------------------------------------------------------------------------
 - (void) onExitBackgroundNtf: (NSNotification*) ntf
 {
-    if (! [self performSelectorOnDownloadThread: _cmd
-                                     withObject: ntf])
-    { 
-        [self stopBackgroundTask]; 
-    }
+    WITH_LOCK (self.lock) { [self stopBackgroundTask]; }
 }
 
 
 //----------------------------------------------------------------------------
 - (void) onRetryConnectionTimer: (NSTimer*) timer
 {
-    if (! [self performSelectorOnDownloadThread: _cmd
-                                     withObject: timer])
+    WITH_LOCK (self.lock) 
     {
         if (! [self startConnection])
         {
@@ -468,8 +463,7 @@
 //----------------------------------------------------------------------------
 - (void) performCompletionHandler
 {
-    if (self.completionHandler) 
-    {
+    if (self.completionHandler) {
         dispatch_async (dispatch_get_main_queue(), 
                         ^{ 
                             self.completionHandler (self, self.error);
@@ -490,7 +484,7 @@
 {
     int http_status = [(NSHTTPURLResponse*)response statusCode];
 
-    DFNLOG (@"CONNECTION %p GOT RESPONSE %d HEADERS: %@", self.connection, http_status, [(NSHTTPURLResponse*) response allHeaderFields]);
+    DFNLOG (@"CONNECTION %p GOT RESPONSE %d HEADERS: %@", self.connection, http_status, [(NSHTTPURLResponse*)response allHeaderFields]);
     DFNLOG (@"-- INITIAL REQUEST WAS: %@ %@", self.request, [self.request allHTTPHeaderFields]);
 
 
@@ -582,7 +576,7 @@
                               toPath: self.downloadPath
                                error: &err])
             {
-                ELOG (@"ERROR: Failed to copy partial file to '%@'. %@", self.downloadPath, [err localizedDescription]);
+                DFNLOG (@"ERROR: Failed to copy partial file to '%@'. %@", self.downloadPath, [err localizedDescription]);
             }
         }
     }
@@ -597,43 +591,27 @@
 - (void) connection: (NSURLConnection*) connection
  didReceiveResponse: (NSURLResponse*) response
 {
-    if (! [self performSelectorOnDownloadThread: @selector(onDidReceiveResponse:)
-                                     withObject: response])
-    {
-        [self onDidReceiveResponse: response]; 
-    }
+    WITH_LOCK (self.lock) { [self onDidReceiveResponse: response]; }
 }
 
 //----------------------------------------------------------------------------
 - (void) connection: (NSURLConnection*) connection 
      didReceiveData: (NSData*) data
 {
-    if (! [self performSelectorOnDownloadThread: @selector(onDidReceiveData:)
-                                     withObject: data])
-    {
-        [self onDidReceiveData: data]; 
-    }
+    WITH_LOCK (self.lock) { [self onDidReceiveData: data]; }
 }
 
 //----------------------------------------------------------------------------
 - (void) connectionDidFinishLoading: (NSURLConnection*) connection 
 {
-    if (! [self performSelectorOnDownloadThread: @selector(onFinishWithError:)
-                                     withObject: nil])
-    { 
-        [self onFinishWithError: nil]; 
-    }
+    WITH_LOCK (self.lock) { [self onFinishWithError: nil]; }
 }
 
 //----------------------------------------------------------------------------
 - (void)  connection: (NSURLConnection*) connection 
     didFailWithError: (NSError*) error
 {
-    if (! [self performSelectorOnDownloadThread: @selector(onFinishWithError:)
-                                     withObject: error])
-    { 
-        [self onFinishWithError: error]; 
-    }
+    WITH_LOCK (self.lock) { [self onFinishWithError: error]; }
 }
 
 //----------------------------------------------------------------------------
@@ -673,4 +651,5 @@
 }
 
 @end
+
 /* EOF */
