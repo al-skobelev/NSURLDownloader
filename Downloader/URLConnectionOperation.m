@@ -108,14 +108,23 @@
 
 //----------------------------------------------------------------------------
 + operationWithRequest: (NSURLRequest*) request
+     completionHandler: (void (^)(URLConnectionOperation* op, NSError* err)) completionHandler
+{
+    return [self operationWithRequest: request
+                         downloadPath: nil
+                        updateHandler: nil
+                    completionHandler: completionHandler];
+}
+
+//----------------------------------------------------------------------------
++ operationWithRequest: (NSURLRequest*) request
          updateHandler: (void (^)(URLConnectionOperation* op, size_t downloaded, size_t expected)) updateHandler
      completionHandler: (void (^)(URLConnectionOperation* op, NSError* err)) completionHandler
 {
-    return [[self alloc] 
-               initWithRequest: request
-                  downloadPath: nil
-                 updateHandler: updateHandler
-             completionHandler: completionHandler];
+    return [self operationWithRequest: request
+                         downloadPath: nil
+                        updateHandler: updateHandler
+                    completionHandler: completionHandler];
 }
 
 //----------------------------------------------------------------------------
@@ -507,7 +516,7 @@
     }
 
     self.retryCount = 0;
-    self.contentLength = response.expectedContentLength;
+    self.contentLength = ((response.expectedContentLength > 0) ? response.expectedContentLength : 0);
 
     if (http_status != 206)
     {
