@@ -42,7 +42,7 @@
 		D916ADC115A6DAAC0054E150 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		D970F5D815B6A038008384C5 /* URLConnectionOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = URLConnectionOperation.h; sourceTree = "<group>"; };
 		D970F5D915B6A038008384C5 /* URLConnectionOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = URLConnectionOperation.m; sourceTree = "<group>"; };
-		D9B587C515A5A61100CEFC5C /* Downloader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Downloader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D9B587C515A5A61100CEFC5C /* NSURLDownloader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NSURLDownloader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D9B587C915A5A61100CEFC5C /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		D9B587CB15A5A61100CEFC5C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		D9B587CD15A5A61100CEFC5C /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -104,7 +104,7 @@
 		D9B587C615A5A61100CEFC5C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D9B587C515A5A61100CEFC5C /* Downloader.app */,
+				D9B587C515A5A61100CEFC5C /* NSURLDownloader.app */,
 				D9B587E615A5A61100CEFC5C /* DownloaderTests.octest */,
 			);
 			name = Products;
@@ -187,7 +187,7 @@
 			);
 			name = NSURLDownloader;
 			productName = Downloader;
-			productReference = D9B587C515A5A61100CEFC5C /* Downloader.app */;
+			productReference = D9B587C515A5A61100CEFC5C /* NSURLDownloader.app */;
 			productType = "com.apple.product-type.application";
 		};
 		D9B587E515A5A61100CEFC5C /* DownloaderTests */ = {

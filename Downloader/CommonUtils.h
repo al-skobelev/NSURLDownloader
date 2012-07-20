@@ -66,7 +66,7 @@
 //
 // NSDICT(), NSSET(), NSARRAY()
 //============================================================================
-#define NSDICT(FIRST_KEY$, ARGS$...) ns_mdict (FIRST_KEY$, ##ARGS$, nil)
+#define NSDICT(FIRST_KEY$, ARGS$...) makedict (FIRST_KEY$, ##ARGS$, nil)
 
 #define NSSET(FIRST_OBJ$, ARGS$...)                                     \
     ({                                                                  \
@@ -261,7 +261,7 @@
 extern "C" {
 #endif
 
-NSMutableDictionary* ns_mdict (id firstKey, ...);
+NSMutableDictionary* makedict (id firstKey, ...);
 
 id info_for_key (NSString* key);
 id info_for_key_in_bundle (NSString* key, NSBundle* bundle);

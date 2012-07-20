@@ -122,7 +122,7 @@ QUIT:
 }
 
 //----------------------------------------------------------------------------
-NSMutableDictionary* ns_mdict (id firstKey, ...)
+NSMutableDictionary* makedict (id firstKey, ...)
 {
     id dict = [NSMutableDictionary dictionary];
     if (firstKey)

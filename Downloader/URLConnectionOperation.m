@@ -141,6 +141,90 @@
 }
 
 //----------------------------------------------------------------------------
++ (BOOL) shouldRetryOnError: (NSError*) error
+{
+
+    switch (error.code)
+    {
+
+       case kCFHostErrorHostNotFound:
+       case kCFHostErrorUnknown:
+        // // SOCKS errors; in all cases you may query kCFSOCKSStatusCodeKey to recover the status code returned by the server
+        //case kCFSOCKSErrorUnknownClientVersion:
+        //case kCFSOCKSErrorUnsupportedServerVersion:
+        // // SOCKS4-specific errors
+        //case kCFSOCKS4ErrorRequestFailed:
+        //case kCFSOCKS4ErrorIdentdFailed:
+        //case kCFSOCKS4ErrorIdConflict:
+        //case kCFSOCKS4ErrorUnknownStatusCode:
+        // // SOCKS5-specific errors
+        //case kCFSOCKS5ErrorBadState:
+        //case kCFSOCKS5ErrorBadResponseAddr:
+        //case kCFSOCKS5ErrorBadCredentials:
+        //case kCFSOCKS5ErrorUnsupportedNegotiationMethod:
+        //case kCFSOCKS5ErrorNoAcceptableMethod:
+        // // FTP errors; query the kCFFTPStatusCodeKey to get the status code returned by the server
+        //case kCFFTPErrorUnexpectedStatusCode:
+        // // HTTP errors
+        //case kCFErrorHTTPAuthenticationTypeUnsupported:
+        //case kCFErrorHTTPBadCredentials:
+       case kCFErrorHTTPConnectionLost:
+        //case kCFErrorHTTPParseFailure:
+        //case kCFErrorHTTPRedirectionLoopDetected:
+        //case kCFErrorHTTPBadURL:
+        //case kCFErrorHTTPProxyConnectionFailure:
+        //case kCFErrorHTTPBadProxyCredentials:
+        //case kCFErrorPACFileError:
+        //case kCFErrorPACFileAuth:
+        //case kCFErrorHTTPSProxyConnectionFailure:
+	
+        // Error codes for CFURLConnection and CFURLProtocol
+       case kCFURLErrorUnknown:
+        //case kCFURLErrorCancelled:
+        //case kCFURLErrorBadURL:
+       case kCFURLErrorTimedOut:
+        //case kCFURLErrorUnsupportedURL:
+       case kCFURLErrorCannotFindHost:
+       case kCFURLErrorCannotConnectToHost:
+       case kCFURLErrorNetworkConnectionLost:
+       case kCFURLErrorDNSLookupFailed:
+        //case kCFURLErrorHTTPTooManyRedirects:
+        //case kCFURLErrorResourceUnavailable:
+       case kCFURLErrorNotConnectedToInternet:
+       case kCFURLErrorRedirectToNonExistentLocation:
+        //case kCFURLErrorBadServerResponse:
+        //case kCFURLErrorUserCancelledAuthentication:
+        //case kCFURLErrorUserAuthenticationRequired:
+        //case kCFURLErrorZeroByteResource:
+        //case kCFURLErrorCannotDecodeRawData:
+        //case kCFURLErrorCannotDecodeContentData:
+        //case kCFURLErrorCannotParseResponse:
+        //case kCFURLErrorInternationalRoamingOff:
+        //case kCFURLErrorCallIsActive:
+        //case kCFURLErrorDataNotAllowed:
+        //case kCFURLErrorRequestBodyStreamExhausted:
+        //case kCFURLErrorFileDoesNotExist:
+        //case kCFURLErrorFileIsDirectory:
+        //case kCFURLErrorNoPermissionsToReadFile:
+        //case kCFURLErrorDataLengthExceedsMaximum:
+        // // SSL errors
+       case kCFURLErrorSecureConnectionFailed:
+        //case kCFURLErrorServerCertificateHasBadDate:
+        //case kCFURLErrorServerCertificateUntrusted:
+        //case kCFURLErrorServerCertificateHasUnknownRoot:
+        //case kCFURLErrorServerCertificateNotYetValid:
+        //case kCFURLErrorClientCertificateRejected:
+        //case kCFURLErrorClientCertificateRequired:
+        // kCFURLErrorCannotLoadFromNetwork
+
+           DFNLOG(@"SHOULD RETRY ON ERROR WITH CODE %d (%@)", error.code, [error localizedDescription]);
+           return YES;
+    };
+
+    DFNLOG(@"SHOULD *NOT* RETRY ON ERROR WITH CODE %d (%@)", error.code, [error localizedDescription]);
+    return NO;
+}
+//----------------------------------------------------------------------------
 - (id) initWithRequest: (NSURLRequest*) request
           downloadPath: (NSString*) downloadPath
          updateHandler: (void (^)(URLConnectionOperation* op, size_t downloaded, size_t expected)) updateHandler
@@ -575,16 +659,19 @@
 
     if (err)
     {
-        static NSTimeInterval _s_interval[] = { 1.0, 3.0, 5.0 };
-                
-        if (self.retryCount < NELEMS(_s_interval))
+        if ([[self class] shouldRetryOnError: err])
         {
-            self.retryTimer = 
-                [NSTimer scheduledTimerWithTimeInterval: _s_interval [self.retryCount++]
-                                                 target: self
-                                               selector: @selector(onRetryConnectionTimer:)
-                                               userInfo: nil
-                                                repeats: NO];
+            static NSTimeInterval _s_interval[] = { 1.0, 3.0, 5.0 };
+                
+            if (self.retryCount < NELEMS(_s_interval))
+            {
+                self.retryTimer = 
+                    [NSTimer scheduledTimerWithTimeInterval: _s_interval [self.retryCount++]
+                                                     target: self
+                                                   selector: @selector(onRetryConnectionTimer:)
+                                                   userInfo: nil
+                                                    repeats: NO];
+            }
         }                    
     }
     else 
